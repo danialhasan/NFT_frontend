@@ -1,29 +1,125 @@
-<script setup>
-import ButtonRepo from '@/components/ButtonRepo.vue'
+<script>
+import { ethers } from "ethers";
+import abi from "../utils/NFT.json";
+const { ethereum } = window;
+export default {
+  data() {
+    return {
+      currentAccount: "",
+      connectedAccounts: [],
+      walletIsConnected: false,
+      contractAddress: "0x5E30bB819b0D536CB8a65D2a0AACd0a2Aba98A72",
+      accountChangeListener: false,
+    };
+  },
+  methods: {
+    checkMetamaskConnection() {
+      try {
+        if (!ethereum) {
+          console.error("Metamask not found. Please install Metamask.");
+          return;
+        } else {
+          console.log("Metamask connected:", ethereum);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    async getEthereumAccount() {},
+    async connectWallet() {
+      this.checkMetamaskConnection();
+
+      console.log("Connecting wallet...");
+
+      // get users ethereum account
+      ethereum
+        .request({ method: "eth_requestAccounts" })
+        .then((accounts) => {
+          console.log(accounts[0]);
+          this.connectedAccounts = accounts;
+          this.walletIsConnected = true;
+          this.currentAccount = accounts[0];
+          console.log("Connected");
+          this.checkAccountChange;
+        })
+        .catch((error) => {
+          console.error("Unable to request eth accounts ", error);
+          this.walletIsConnected = false;
+        });
+    },
+    async mintCatNFT() {},
+    checkAccountChange() {
+      // listener is initialized every time this is run.
+      if (!this.accountChangeListener) {
+        ethereum.on("accountsChanged", (account) => {
+          console.log("accounts changed!", account);
+          this.currentAccount = account[0];
+        });
+        this.accountChangeListener = true;
+      } else {
+        console.log("Listener not initialized");
+      }
+    },
+  },
+  components: {},
+  computed() {},
+};
 </script>
 
 <template>
-  <div class="bg-gray-50">
-    <div
-      class="max-w-screen-xl px-4 py-12 mx-auto sm:px-6 lg:py-16 lg:px-8 lg:flex lg:items-center lg:justify-between"
+  <div class="pt-20 text-center">
+    <button
+      @click="connectWallet()"
+      class="
+        absolute
+        flex
+        justify-center
+        items-center
+        right-0
+        top-0
+        px-6
+        py-4
+        m-4
+        rounded-xl
+        bg-blue-500
+        text-gray-50
+      "
     >
-      <h2
-        class="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 sm:text-4xl sm:leading-10"
-      >
-        Ready to dive in?
-        <br />
-        <span class="text-indigo-600">Vite + Vue 3 + Tailwind CSS</span>
-      </h2>
-      <div class="flex mt-8 lg:flex-shrink-0 lg:mt-0">
-        <div class="inline-flex rounded-md shadow">
-          <router-link
-            to="/about"
-            class="inline-flex items-center justify-center px-5 py-3 text-base font-medium leading-6 text-white transition duration-150 ease-in-out bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 focus:outline-none"
-            >Next Page</router-link
-          >
-        </div>
-        <ButtonRepo />
-      </div>
-    </div>
+      <span
+        class="mr-2 w-4 h-4 rounded-full block"
+        :class="this.walletIsConnected ? 'bg-green-500' : 'bg-red-500'"
+      ></span>
+      Connect Wallet
+    </button>
+    <h1
+      class="
+        font-bold
+        text-5xl
+        bg-clip-text
+        text-transparent
+        bg-gradient-to-r
+        from-green-400
+        to-blue-500
+        text-center
+        py-3
+      "
+    >
+      NFT Minting Project
+    </h1>
+
+    <button
+      class="
+        px-8
+        py-3
+        text-xl
+        rounded-lg
+        mt-6
+        bg-indigo-500
+        text-gray-50
+        mx-auto
+      "
+    >
+      Mint NFT
+    </button>
   </div>
 </template>
