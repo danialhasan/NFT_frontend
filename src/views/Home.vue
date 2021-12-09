@@ -12,7 +12,7 @@ export default {
 			currentAccount: '',
 			walletIsConnected: false,
 			contractAddress: '0x5E30bB819b0D536CB8a65D2a0AACd0a2Aba98A72',
-			accountChangeListener: false,
+			metamaskListeners: false,
 			showFlashMessage: false,
 			flashMessageInfo: {
 				role: undefined,
@@ -30,7 +30,7 @@ export default {
 					console.error('Metamask not found. Please install Metamask.');
 					return;
 				}
-				console.log('Metamask connected:', ethereum);
+				console.log('Metamask installed:', ethereum);
 			} catch (error) {
 				console.error(error);
 			}
@@ -38,7 +38,10 @@ export default {
 		async getEthereumAccount() { },
 		async connectWallet() {
 			this.checkMetamaskConnection();
-
+			if (this.walletIsConnected) {
+				console.log("Wallet is already connected");
+				return
+			}
 			console.log('Connecting wallet...');
 
 			// request users ethereum account
@@ -117,18 +120,49 @@ export default {
 				this.showFlashMessage = false;
 			}, 3500); // non-blocking
 		},
-		checkAccountChange() {
+		activateMetamaskEventListeners() {
 			// listener is initialized every time this is run.
-			if (!this.accountChangeListener) {
-				console.log('Initializing listener...');
-				ethereum.on('accountsChanged', (account) => {
-					console.log('accounts changed!', account);
-					this.currentAccount = account[0];
-				});
-				this.accountChangeListener = true;
-			} else {
-				console.log('Extra listener not initialized');
-			}
+			console.log('Initializing listeners...');
+			ethereum.on('accountsChanged', (account) => {
+				console.log('accounts changed!', account);
+				this.currentAccount = account[0];
+			});
+			ethereum.on('disconnect', () => { console.log("Metamask Disconnected") })
+			ethereum.on('connect', (connectInfo) => {
+				console.log("Metamask chain RPC connection established: ", connectInfo)
+			})
+			ethereum.on('chainChanged', (chainId) => {
+				switch (chainId) {
+					case 1:
+						console.log("Switched to Mainnet")
+						break;
+					case 2:
+						console.log("Switched to Expanse")
+						break;
+					case 3:
+						console.log("Switched to Ropsten")
+						break;
+					case 4:
+						console.log("Switched to Rinkeby")
+						break;
+					case 5:
+						console.log("Switched to Gorli")
+						break;
+					case 6:
+						console.log("Switched to Classic Testnet")
+						break;
+					default:
+						break;
+				}
+			})
+		},
+
+		deactivateMetamaskEventListeners() {
+			ethereum.removeListener('accountsChanged');
+			ethereum.removeListener('disconnect');
+			ethereum.removeListener('connect');
+			ethereum.removeListener('chainChanged');
+
 		},
 	},
 	components: { FlashMessage },
@@ -139,8 +173,11 @@ export default {
 	},
 	mounted() {
 		this.checkWalletConnected();
-		this.checkAccountChange();
+		this.activateMetamaskEventListeners();
 	},
+	unmounted() {
+		this.deactivateMetamaskEventListeners();
+	}
 };
 </script>
 
