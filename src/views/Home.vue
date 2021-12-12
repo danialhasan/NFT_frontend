@@ -9,6 +9,7 @@ const { ethereum } = window;
 export default {
 	data() {
 		return {
+			nftMinted: false,
 			currentAccount: '',
 			walletIsConnected: false,
 			contractAddress: '0xB7E15D67cD3000B4554B1403d3FE6579ce744FD8',
@@ -42,7 +43,6 @@ export default {
 				console.error(error);
 			}
 		},
-		async getEthereumAccount() { },
 		async connectWallet() {
 			this.checkMetamaskConnection();
 			if (this.walletIsConnected) {
@@ -119,7 +119,7 @@ export default {
 					textColor: 'text-gray-900',
 					description: 'Mining transaction...',
 					txnHash: response.hash,
-				})
+				}, true)
 
 				await response.wait();
 				await this.getTokenURI();
@@ -129,28 +129,31 @@ export default {
 					textColor: 'text-gray-900',
 					description: "Transaction succeeded!",
 					txnHash: response.hash,
-				})
+				}, true)
+				this.nftMinted = true
 			} catch (error) {
 				this.triggerFlashMessage({
 					description: "Error: Transaction failed.",
 					role: 'alert',
 					backgroundColor: 'bg-red-500',
 					textColor: 'text-gray-50',
-				})
+				}, true)
 
 				console.error(error);
 			}
 		},
-		triggerFlashMessage(config) {
+		triggerFlashMessage(config, timeout) {
 			// this function handles showing and hiding of the flash message 
 			// and it's data. 
 			this.showFlashMessage = true;
 			this.flashMessageInfo = config;
-			setTimeout(() => {
-				this.showFlashMessage = false;
-			}, 5000); // non-blocking
+			if (timeout) {
+				setTimeout(() => {
+					this.showFlashMessage = false;
+				}, 5000); // non-blocking
+			}
 		},
-		activateMetamaskEventListeners() {
+		async activateMetamaskEventListeners() {
 			// listener is initialized every time this is run.
 			console.log('Initializing listeners...');
 			ethereum.on('accountsChanged', (account) => {
@@ -161,14 +164,20 @@ export default {
 			ethereum.on('connect', (connectInfo) => {
 				console.log("Metamask chain RPC connection established: ", connectInfo)
 			})
-			ethereum.on('chainChanged', (chainId) => {
+			ethereum.on('chainChanged', async (chainId) => {
 				chainId = parseInt(chainId, 16)
 				console.log("chain changed: ", chainId)
 				switch (chainId) {
 					case 1:
 						console.warn("WARNING: Switched to Mainnet")
 						this.walletIsConnected = false;
-						this.currentAccount = ""
+						this.currentAccount = "";
+						this.triggerFlashMessage({
+							role: 'warning',
+							eackgroundColos: 'bg-yellow-400',
+							textColor: 'text-gray-900',
+							description: 'Warning: You are on the mainnet. Please switch to the Rinkeby network.',
+						}, true)
 						break;
 					case 2:
 						console.log("Switched to Expanse")
@@ -178,6 +187,7 @@ export default {
 						break;
 					case 4:
 						console.log("Switched to Rinkeby")
+						window.location.reload()
 						break;
 					case 5:
 						console.log("Switched to Gorli")
@@ -189,6 +199,17 @@ export default {
 						break;
 				}
 			})
+			let network = parseInt(await ethereum.request({ method: "eth_chainId" }), 16)
+			if (network !== 4) {
+				this.triggerFlashMessage({
+					role: 'warning',
+					eackgroundColos: 'bg-yellow-400',
+					textColor: 'text-gray-900',
+					description: 'WARNING: You are not connected to the Rinkeby network. This dapp only works on the Rinkeby network.',
+				})
+				this.walletIsConnected = false;
+				this.currentAccount = ""
+			}
 		},
 
 		deactivateMetamaskEventListeners() {
@@ -239,7 +260,10 @@ export default {
 			class="px-8 py-3 text-xl rounded-lg mt-6 bg-indigo-500 text-gray-50 mx-auto"
 			@click="mintCatNFT"
 		>Mint NFT</button>
-		<div class="pb-24 flex flex-col md:w-3/5 lg:flex-row  lg:w-[720px] w-4/5 h-auto mx-auto mt-12">
+		<div
+			v-show="nftMinted"
+			class="pb-24 flex flex-col md:w-3/5 lg:flex-row lg:w-[720px] w-4/5 h-auto mx-auto mt-12"
+		>
 			<div class="w-full h-auto bg-blue-500 flex">
 				<!-- This is the image container. -->
 				<img class="mx-auto w-full" :src="this.tokenData.tokenURI.image" alt="NFT image displayed here" />
