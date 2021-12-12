@@ -11,7 +11,7 @@ export default {
 		return {
 			currentAccount: '',
 			walletIsConnected: false,
-			contractAddress: '0x5E30bB819b0D536CB8a65D2a0AACd0a2Aba98A72',
+			contractAddress: '0xB7E15D67cD3000B4554B1403d3FE6579ce744FD8',
 			metamaskListeners: false,
 			showFlashMessage: false,
 			flashMessageInfo: {
@@ -20,6 +20,13 @@ export default {
 				textColor: undefined,
 				description: undefined,
 				txnHash: undefined,
+			},
+			tokenData: {
+				owner: "",
+				tokenID: 0,
+				tokenURI: {
+					image: ""
+				}
 			},
 		};
 	},
@@ -58,6 +65,26 @@ export default {
 					this.walletIsConnected = false;
 				});
 		},
+		async getTokenURI() {
+			const provider = new ethers.providers.Web3Provider(ethereum);
+			const signer = provider.getSigner();
+			const catContract = new ethers.Contract(this.contractAddress, abi, signer);
+			// activate smart contract event listener
+			catContract.on('CatNFTMinted', (owner, tokenID, tokenURI) => {
+				console.log("Owner: ", owner);
+				console.log("TokenID: ", tokenID);
+				console.log("TokenURI: ", tokenURI)
+				tokenURI = atob(tokenURI.split(';base64,')[1])
+				tokenID = parseInt(tokenID, 16) // the '16' is a radix param, used to specify the number system to use (16 = hex)
+				this.tokenData = {
+					owner,
+					tokenID,
+					tokenURI: JSON.parse(tokenURI)
+				}
+				console.log("TokenID: ", tokenID);
+				console.log("TokenURI: ", tokenURI)
+			})
+		},
 		async checkWalletConnected() {
 			const accounts = await ethereum.request({ method: 'eth_accounts' }); // get accounts that have already been connected (doesn't show metamask login popup)
 			console.log(
@@ -68,6 +95,8 @@ export default {
 				this.currentAccount = accounts[0];
 				console.log('Connected');
 			} else {
+				this.walletIsConnected = false;
+				this.currentAccount = ""
 				console.error('Wallet not connected');
 			}
 		},
@@ -86,13 +115,14 @@ export default {
 
 				this.triggerFlashMessage({
 					role: 'warning',
-					backgroundColor: 'bg-yellow-400',
+					eackgroundColos: 'bg-yellow-400',
 					textColor: 'text-gray-900',
 					description: 'Mining transaction...',
 					txnHash: response.hash,
 				})
 
 				await response.wait();
+				await this.getTokenURI();
 				this.triggerFlashMessage({
 					role: 'success',
 					backgroundColor: 'bg-green-400',
@@ -118,7 +148,7 @@ export default {
 			this.flashMessageInfo = config;
 			setTimeout(() => {
 				this.showFlashMessage = false;
-			}, 3500); // non-blocking
+			}, 5000); // non-blocking
 		},
 		activateMetamaskEventListeners() {
 			// listener is initialized every time this is run.
@@ -132,9 +162,13 @@ export default {
 				console.log("Metamask chain RPC connection established: ", connectInfo)
 			})
 			ethereum.on('chainChanged', (chainId) => {
+				chainId = parseInt(chainId, 16)
+				console.log("chain changed: ", chainId)
 				switch (chainId) {
 					case 1:
-						console.log("Switched to Mainnet")
+						console.warn("WARNING: Switched to Mainnet")
+						this.walletIsConnected = false;
+						this.currentAccount = ""
 						break;
 					case 2:
 						console.log("Switched to Expanse")
@@ -167,6 +201,9 @@ export default {
 	},
 	components: { FlashMessage },
 	computed: {
+		generateOpenseaLink() {
+			return `https://testnets.opensea.io/assets/${this.contractAddress}/${this.tokenData.tokenID}`
+		},
 		addressIsConnected() {
 			return typeof this.currentAccount === 'string' && this.currentAccount.length > 0;
 		},
@@ -182,7 +219,7 @@ export default {
 </script>
 
 <template>
-	<div class="pt-48 text-center">
+	<div class="pt-48 text-center w-full">
 		<button
 			@click="connectWallet()"
 			class="absolute flex justify-center items-center right-0 top-0 px-6 py-4 m-4 rounded-xl bg-blue-500 text-gray-50"
@@ -202,7 +239,28 @@ export default {
 			class="px-8 py-3 text-xl rounded-lg mt-6 bg-indigo-500 text-gray-50 mx-auto"
 			@click="mintCatNFT"
 		>Mint NFT</button>
-		<div class="absolute w-full bottom-0">
+		<div class="pb-24 flex flex-col md:w-3/5 lg:flex-row  lg:w-[720px] w-4/5 h-auto mx-auto mt-12">
+			<div class="w-full h-auto bg-blue-500 flex">
+				<!-- This is the image container. -->
+				<img class="mx-auto w-full" :src="this.tokenData.tokenURI.image" alt="NFT image displayed here" />
+			</div>
+
+			<div class="w-full h-auto pt-6 pl-6 bg-gray-200 text-left">
+				<!-- This is the text container. -->
+				<h2 class="font-bold text-2xl">Cat ID: {{ this.tokenData.tokenID }}</h2>
+				<h3 class="font-normal text-xl">Description</h3>
+				<p>{{ this.tokenData.tokenURI.description }}</p>
+				<div class="w-full h-auto">
+					<a :href="generateOpenseaLink" target="_blank">
+						<button class="p-4 my-4 bg-blue-500 text-white rounded-lg">
+							View on
+							<span class="font-bold underline">Opensea</span>
+						</button>
+					</a>
+				</div>
+			</div>
+		</div>
+		<div class="fixed w-full bottom-0">
 			<flash-message
 				v-on:closeFlashMessage="showFlashMessage = false"
 				v-bind="flashMessageInfo"

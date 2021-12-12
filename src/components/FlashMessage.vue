@@ -28,7 +28,7 @@ export default {
 	emits: ['closeFlashMessage'],
 	computed: {
 		generateEtherscanLink() {
-			return 'https://etherscan.io/tx/' + this.txnHash;
+			return 'https://rinkeby.etherscan.io/tx/' + this.txnHash;
 		},
 		style() {
 			return this.backgroundColor + ' ' + this.textColor;
