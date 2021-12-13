@@ -9,6 +9,7 @@ const { ethereum } = window;
 export default {
 	data() {
 		return {
+			userCanMint: true,
 			nftMinted: false,
 			currentAccount: '',
 			walletIsConnected: false,
@@ -101,6 +102,7 @@ export default {
 			}
 		},
 		async mintCatNFT() {
+			if (!this.userCanMint) return;
 			try {
 				if (!ethereum) {
 					throw Error('Ethereum object was not found; Please connect Metamask.');
@@ -179,23 +181,22 @@ export default {
 							description: 'Warning: You are on the mainnet. Please switch to the Rinkeby network.',
 						}, true)
 						break;
-					case 2:
-						console.log("Switched to Expanse")
-						break;
-					case 3:
-						console.log("Switched to Ropsten")
-						break;
+
 					case 4:
 						console.log("Switched to Rinkeby")
 						window.location.reload()
 						break;
-					case 5:
-						console.log("Switched to Gorli")
-						break;
-					case 6:
-						console.log("Switched to Classic Testnet")
-						break;
+
 					default:
+						this.walletIsConnected = false;
+						this.currentAccount = "";
+						this.userCanMint = false;
+						this.triggerFlashMessage({
+							role: 'warning',
+							eackgroundColos: 'bg-yellow-400',
+							textColor: 'text-gray-900',
+							description: 'Warning: Please switch to the Rinkeby network.',
+						}, false)
 						break;
 				}
 			})
@@ -208,7 +209,11 @@ export default {
 					description: 'WARNING: You are not connected to the Rinkeby network. This dapp only works on the Rinkeby network.',
 				})
 				this.walletIsConnected = false;
-				this.currentAccount = ""
+				this.currentAccount = "";
+				this.userCanMint = false;
+			}
+			else {
+				this.userCanMint = true;
 			}
 		},
 
@@ -228,6 +233,13 @@ export default {
 		addressIsConnected() {
 			return typeof this.currentAccount === 'string' && this.currentAccount.length > 0;
 		},
+		canUserMint() {
+			if (this.userCanMint) {
+				return "bg-indigo-400 cursor-pointer"
+			} else {
+				return "bg-indigo-200 cursor-not-allowed"
+			}
+		}
 	},
 	mounted() {
 		this.checkWalletConnected();
@@ -257,7 +269,9 @@ export default {
 		>NFT Minting Project</h1>
 
 		<button
-			class="px-8 py-3 text-xl rounded-lg mt-6 bg-indigo-500 text-gray-50 mx-auto"
+			class="px-8 py-3 text-xl rounded-lg mt-6 text-gray-50 mx-auto"
+			:class="canUserMint"
+			id="mintCatNFTButton"
 			@click="mintCatNFT"
 		>Mint NFT</button>
 		<div
