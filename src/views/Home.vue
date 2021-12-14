@@ -9,7 +9,7 @@ const { ethereum } = window;
 export default {
 	data() {
 		return {
-			userCanMint: true,
+			userCanMint: false,
 			nftMinted: false,
 			currentAccount: '',
 			walletIsConnected: false,
@@ -59,6 +59,7 @@ export default {
 					console.log(accounts[0]);
 					this.walletIsConnected = true;
 					this.currentAccount = accounts[0];
+					this.userCanMint = true;
 					console.log('Connected');
 				})
 				.catch((error) => {
@@ -94,15 +95,16 @@ export default {
 			if (accounts.length > 0) {
 				this.walletIsConnected = true;
 				this.currentAccount = accounts[0];
+				this.userCanMint = true
 				console.log('Connected');
 			} else {
 				this.walletIsConnected = false;
 				this.currentAccount = ""
+				this.userCanMint = false
 				console.error('Wallet not connected');
 			}
 		},
 		async mintCatNFT() {
-			if (!this.userCanMint) return;
 			try {
 				if (!ethereum) {
 					throw Error('Ethereum object was not found; Please connect Metamask.');
@@ -213,7 +215,7 @@ export default {
 				this.userCanMint = false;
 			}
 			else {
-				this.userCanMint = true;
+				if (walletIsConnected) this.userCanMint = true;
 			}
 		},
 
